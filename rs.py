@@ -9,23 +9,34 @@ import time
 
 # print(pyautogui.size())
 
-reset_aggression_minimap_img = cv2.imread("./images/reset-aggression.png", 1)
-return_to_crabs_minimap_img = cv2.imread("./images/return-to-crabs.png", 1)
-target_crab_tile_img = cv2.imread("./images/crabs-tile.png", 1)
 
-bankstall_img = cv2.imread("./images/bank-stall.png", 1)
-bankstall_from_furnace_img = cv2.imread("./images/bank-stall-from-furnace.png", 1)
-deposit_inventory_img = cv2.imread("./images/deposit-inventory.png", 1)
-
-furnace_img = cv2.imread("./images/furnace.png", 1)
-furnace_highlighted_img = cv2.imread("./images/furnace-highlighted.png", 1)
+def load_image(path):
+    return cv2.cvtColor(cv2.imread(path), cv2.COLOR_BGR2GRAY)
 
 
-glassblowing_pipe_img = cv2.imread("./images/glassblowing-pipe.png", 1)
-molten_glass_img = cv2.imread("./images/molten-glass.png", 1)
-lantern_lens_img = cv2.imread("./images/lantern-lens.png", 1)
-sand_bucket_img = cv2.imread("./images/sand-bucket.png", 1)
-soda_ash_img = cv2.imread("./images/soda-ash.png", 1)
+reset_aggression_minimap_img = load_image("./images/reset-aggression.png")
+return_to_crabs_minimap_img = load_image("./images/return-to-crabs.png")
+target_crab_tile_img = load_image("./images/crabs-tile.png")
+
+bankstall_img = load_image("./images/bank-stall.png")
+bankstall_from_furnace_img = load_image("./images/bank-stall-from-furnace.png")
+deposit_inventory_img = load_image("./images/deposit-inventory.png")
+
+furnace_img = load_image("./images/furnace.png")
+furnace_highlighted_img = load_image("./images/furnace-highlighted.png")
+highlight_interaction_spot = load_image("./images/purple-interact.png")
+
+
+glassblowing_pipe_img = load_image("./images/glassblowing-pipe.png")
+molten_glass_img = load_image("./images/molten-glass.png")
+lantern_lens_img = load_image("./images/lantern-lens.png")
+sand_bucket_img = load_image("./images/sand-bucket.png")
+soda_ash_img = load_image("./images/soda-ash.png")
+absorption_pot = load_image("./images/absorption.png")
+
+str_pot = load_image("./images/superattack.png")
+att_pot = load_image("./images/superstr.png")
+range_pot = load_image("./images/rangingpot.png")
 
 
 def hex2rgb(hex_value):
@@ -82,7 +93,7 @@ def show_image(image):
 
 
 def fetch_runelite_window_from_win32gui():
-    window_id = win32gui.FindWindow(None, "RuneLite")
+    window_id = win32gui.FindWindow(None, "RuneLite - BigFarquaad")
     if window_id == 0:
         raise Exception("Unable to find Runelite window from Windows API")
 
@@ -94,7 +105,7 @@ def grab_runelite_image():
     screenshot = ImageGrab.grab(
         bbox=window_rect, include_layered_windows=False, all_screens=True
     ).convert("RGB")
-    frame = cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2BGR)
+    frame = cv2.cvtColor(np.array(screenshot), cv2.COLOR_BGR2GRAY)
     return frame
 
 
@@ -102,10 +113,13 @@ def find_in_game(image_to_find, show_preview=False):
     return find(grab_runelite_image(), image_to_find, show_preview)
 
 
-def find(image, image_to_find, show_preview=False):
-    z, w, h = image_to_find.shape[::-1]
-    result = cv2.matchTemplate(image, image_to_find, cv2.TM_CCOEFF_NORMED)
-    threshold = 0.50
+def find(
+    image, image_to_find, show_preview=False, template_method=cv2.TM_CCOEFF_NORMED
+):
+    w = image_to_find.shape[1]
+    h = image_to_find.shape[0]
+    result = cv2.matchTemplate(image, image_to_find, template_method)
+    threshold = 0.9
     loc = np.where(result >= threshold)
     if len(loc[0]) <= 0:
         raise Exception("Couldn't find image")
@@ -209,7 +223,8 @@ def craft_glass():
     random_afk_time = 10000
     run_time = 7000
     craft_time = 60000
-    for i in range(0, 4):
+    delay(2000)
+    for i in range(0, 20):
         # CLICK bank
         click(find_in_game(bankstall_img))
         delay(quick_action_delay * 2)
@@ -242,9 +257,45 @@ def test():
     find_in_game(lantern_lens_img, True)
 
 
-def click_automation():
-    for i in range(0, 20):
-        # toggle prayer on/off when hovered over it
+def afk_nmz():
+    quick_action_delay = 500
+    one_hour_ms = 60 * 60 * 1000
+    fifteen_mins_ms = 60 * 15 * 1000
+    one_min_ms = 60 * 1000
+
+    start = time.time() * 1000
+    end = start + one_hour_ms * 4
+    last_absorption_consumption_time = time.time() * 1000
+
+    delay(1000)
+    prayer = pyautogui.position()
+    while True:
+        current_time = time.time() * 1000
+        if current_time > end:
+            return exit(0)
+
+        # # every 15 mins or so, sip absorption pot
+        if current_time > last_absorption_consumption_time + (
+            fifteen_mins_ms + random.uniform(-one_min_ms * 3, one_min_ms * 3)
+        ):
+            try:
+                click(find_in_game(absorption_pot))
+                delay(quick_action_delay * 2)
+                # click(find_in_game(range_pot))
+                click(find_in_game(str_pot))
+                delay(quick_action_delay * 2)
+                click(find_in_game(att_pot))
+                delay(quick_action_delay * 2)
+            except:
+                print("unable to find absorption pot, skipping")
+
+                pass
+            last_absorption_consumption_time = current_time
+
+        # toggle prayer on/off
+        pyautogui.moveTo(
+            prayer.x + random.uniform(-10, 10), prayer.y + random.uniform(-10, 10)
+        )
         pyautogui.click()
         delay(200, variance=100)
         pyautogui.click()
@@ -255,4 +306,6 @@ def click_automation():
 # craft_glass()
 # test()
 
-click_automation()
+afk_nmz()
+# find_in_game(absorption_pot, True)
+# rooftop_agility()
