@@ -93,7 +93,7 @@ def show_image(image):
 
 
 def fetch_runelite_window_from_win32gui():
-    window_id = win32gui.FindWindow(None, "RuneLite - BigFarquaad")
+    window_id = win32gui.FindWindow(None, "RuneLite")
     if window_id == 0:
         raise Exception("Unable to find Runelite window from Windows API")
 
